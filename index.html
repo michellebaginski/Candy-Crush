@@ -1,0 +1,337 @@
+<!--
+CandyCrush
+Your Name: Michelle Baginski
+Collaborators: None
+
+-->
+<!DOCTYPE html>
+<html>
+<!--
+/* Copyright (c) 2017 MIT 6.813/6.831 course staff, all rights reserved.
+ * Redistribution of original or derived work requires permission of course staff.
+ */
+-->
+
+<head>
+<meta charset="utf-8">
+<title>CandyCrush</title>
+
+<!-- Load style sheets -->
+<link rel="stylesheet" href=
+  "https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.css">
+
+<link rel="stylesheet" href="mainLayout.css">
+
+<!-- Use mobile-aware viewport -->
+<meta name="viewport" content=
+  "width=device-width, initial-scale=1, shrink-to-fit=no">
+
+<!-- Load any supplemental Javascript libraries here -->
+<script src=
+  "https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script src=
+  "https://cdnjs.cloudflare.com/ajax/libs/seedrandom/2.4.2/seedrandom.js">
+</script>
+<script src="candy.js"></script>
+<script src="board.js"></script>
+<script src="rules.js"></script>
+
+<script>
+
+// By default, the first board loaded by your page will be the same 
+// each time you load (which is accomplished by "seeding" the random
+// number generator. This makes testing (and grading!) easier!
+Math.seedrandom(0);
+
+
+// A short jQuery extension to read query parameters from the URL.
+$.extend({
+  getUrlVars: function() {
+    var vars = [], pair;
+    var pairs = window.location.search.substr(1).split('&');
+    for (var i = 0; i < pairs.length; i++) {
+      pair = pairs[i].split('=');
+      vars.push(pair[0]);
+      vars[pair[0]] = pair[1] &&
+          decodeURIComponent(pair[1].replace(/\+/g, ' '));
+    }
+    return vars;
+  },
+  getUrlVar: function(name) {
+    return $.getUrlVars()[name];
+  }
+});
+
+// constants
+var DEFAULT_BOARD_SIZE = 8;
+
+// data model at global scope for easier debugging
+var board;
+var rules;
+
+// initialize board
+if ($.getUrlVar('size') && $.getUrlVar('size') >= 3) {
+  board = new Board($.getUrlVar('size'));
+} else {
+  board = new Board(DEFAULT_BOARD_SIZE);
+}
+
+// load a rule
+ rules = new Rules(board);
+
+// Final initialization entry point: the Javascript code inside this block
+// runs at the end of start-up when the page has finished loading.
+$(document).ready(function()
+{
+  // Your code here.
+  generateGameBoard();
+  rules.prepareNewGame();
+});
+
+
+/* Event Handlers */
+// access the candy object with info.candy
+
+// add a candy to the board
+$(board).on('add', function(e, info)
+{
+  // Your code here.
+  console.log("Add");
+  var gameBoard = document.getElementById("gameBoard");
+  //console.log("ADD - " + "ID " + info.candy.id + ", Row " + info.candy.row + ", Col " +
+  //info.candy.col + ", Color " + info.candy.color);
+  if(info.candy.color == "yellow"){
+    gameBoard.rows[info.candy.row].cells[info.candy.col].style.background = info.candy.color;
+    gameBoard.rows[info.candy.row].cells[info.candy.col].style.color = "gray";
+  }
+  else{
+    gameBoard.rows[info.candy.row].cells[info.candy.col].style.background = info.candy.color;
+    gameBoard.rows[info.candy.row].cells[info.candy.col].style.color = "white";
+  }
+
+  if(rules.getCandyCrushes().length > 0) {
+      enableButton("crushOnce");
+  }
+  else{
+    $('#crushOnce').prop('disabled', true);
+    $('#crushOnce').css('background-color', 'darkgray');
+    $('#moveInput').focus();
+  }
+
+});
+
+// move a candy on the board
+$(board).on('move', function(e, info)
+{
+  // Your code here.
+  console.log("Move" + info.candy.id);
+  var gameBoard = document.getElementById("gameBoard");
+  if(info.candy.color == "yellow"){
+    gameBoard.rows[info.candy.row].cells[info.candy.col].style.background = info.candy.color;
+    gameBoard.rows[info.candy.row].cells[info.candy.col].style.color = "gray";
+  }
+  else{
+    gameBoard.rows[info.candy.row].cells[info.candy.col].style.background = info.candy.color;
+    gameBoard.rows[info.candy.row].cells[info.candy.col].style.color = "white";
+  }
+  
+});
+
+// remove a candy from the board
+$(board).on('remove', function(e, info)
+{
+  // Your code here.
+  console.log("Remove");
+  var gameBoard = document.getElementById("gameBoard");
+  gameBoard.rows[info.fromRow].cells[info.fromCol].style.background = "white";
+  gameBoard.rows[info.fromRow].cells[info.fromCol].style.color = "white";
+
+});
+
+// move a candy on the board
+$(board).on('scoreUpdate', function(e, info)
+{
+  // Your code here. To be implemented in pset 2.
+});
+
+// Button Events
+$(document).on('click', ".btn", function(evt)
+{
+  // Your code here.
+  var buttonId = evt.target.id;
+
+  if(buttonId == "newGame") {
+    console.log("New game");
+    board.clear();
+    rules.prepareNewGame();
+  }
+
+  else if(buttonId == "up" || buttonId == "left" || buttonId == "right" || buttonId == "down") {
+    var moveInput = document.getElementById("moveInput").value;
+    document.getElementById("moveInput").value = "";
+    $('#moveInput').focus();
+    direction = buttonId;
+    disableAll();
+
+    var toMoveRow = moveInput.charAt(1)-1;
+    var toMoveCol = moveInput.charCodeAt(0)-97;
+    toMoveCandy =  board.getCandyAt(toMoveRow, toMoveCol);
+    
+    if(rules.isMoveTypeValid(toMoveCandy, buttonId) == true) {
+      console.log("Valid");
+      var newCandy = board.getCandyInDirection(toMoveCandy, buttonId);
+      console.log("Row: " + newCandy.row + ", Col: " + newCandy.col); 
+      enableButton("crushOnce");
+      board.flipCandies(toMoveCandy, newCandy);
+   }
+
+    else{
+      console.log("This block is unreachable.");
+    }
+  }
+
+  else if(buttonId == "crushOnce"){
+    rules.removeCrushes(rules.getCandyCrushes());
+    
+    setTimeout(function() {
+      rules.moveCandiesDown();
+    }, 500);
+    
+    if(rules.getCandyCrushes().length > 0) {
+      console.log("Keep enabled");
+    }
+    else{
+      $('#moveInput').focus();
+      $('#crushOnce').prop('disabled', true);
+      $('#crushOnce').css('background-color', 'darkgray');
+    }
+  }
+});
+
+
+function disableAll(){
+  $('#up').prop('disabled', true);
+  $('#up').css('background-color', 'darkgray');
+
+  $('#left').prop('disabled', true);
+  $('#left').css('background-color', 'darkgray');
+
+  $('#right').prop('disabled', true);
+  $('#right').css('background-color', 'darkgray');
+
+  $('#down').prop('disabled', true);
+  $('#down').css('background-color', 'darkgray');
+}
+
+// keyboard events arrive here
+$(document).on('keydown', function(evt) {
+  // Your code here.
+});
+
+
+function generateGameBoard(){
+  $('#gameBoard').empty();
+  //Rows => Top to bottom => 1,2,3,4
+  var gameBoard = document.getElementById("gameBoard");
+  for(var i = 0; i < board.boardSize; i++) {
+    var row = gameBoard.insertRow(i);
+    
+    //Cols => Left to Right => a,b,c,d
+    for(var j = 0; j < board.boardSize; j++) {
+      var cell = row.insertCell(j);
+      cell.innerHTML = String.fromCharCode(97 + j) + (i+1);
+    }
+  }
+}
+
+function validateMoveInput() {
+  var moveInput = document.getElementById("moveInput").value;
+  var pattern = "^[a-hA-H][1-8]";
+  var toMoveRow = moveInput.charAt(1)-1;
+  var toMoveCol = moveInput.charCodeAt(0)-97;
+  var toMoveCandy =  board.getCandyAt(toMoveRow, toMoveCol);
+
+    if(moveInput.match(pattern) && moveInput != "") {
+      if(rules.isMoveTypeValid(toMoveCandy, "up") == true){
+        enableButton("up");
+      }
+      if(rules.isMoveTypeValid(toMoveCandy, "left") == true){
+        enableButton("left");
+      }
+      if(rules.isMoveTypeValid(toMoveCandy, "right") == true){
+        enableButton("right");
+      }
+      if(rules.isMoveTypeValid(toMoveCandy, "down") == true){
+        enableButton("down");
+      }      
+    }
+}
+
+function enableButton(button){
+  document.getElementById(button).disabled = false;
+  document.getElementById(button).style.backgroundColor = "green";
+}
+
+</script>
+
+
+</head>
+
+<body>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-3" id="firstColumn">
+      <div id = "first">
+      <!-- Column 1 Code Here -->
+      <h3 id="title">Candy Crush</h3>
+      <input class="btn btn-default" type="button" id="newGame" value="New Game">
+      </div>
+
+  </div>
+
+
+    <div class="col-md-6" id="mainColumn">
+      <!-- Column 2 Code Here -->
+      <table id="gameBoard"></table>
+
+    </div>
+
+
+    <div class="col-md-3" id="lastColumn">
+      <!-- Column 3 Code Here -->
+      <div class="col-md-3">
+          <label for="move"><h4><strong>Move: </strong> </h4></label>
+          <input type="text" id="moveInput" value="" maxlength="2" oninput="validateMoveInput()">
+      </div>
+
+
+      <div class="col-md-3">
+        <table id="arrowGrid">
+          <tr>
+            <td></td>
+            <td><input class="btn btn-default arrow" type="button" id="up" disabled="disabled" value="&uarr;"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><input class="btn btn-default arrow" type="button" id="left" disabled="disabled" value="&larr;"></td>
+            <td></td>
+            <td><input class="btn btn-default arrow" type="button" id="right" disabled="disabled" value="&rarr;"></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td><input class="btn btn-default arrow" type="button" id="down" disabled="disabled" value="&darr;"></td>
+            <td></td>
+          </tr>
+        </table>
+
+    </div>
+    <div class="col-md-3">
+      <input class="btn btn-default" type="button" id="crushOnce" disabled="disabled" value="Crush Once">
+    </div>
+  </div> <!-- class="row" -->
+</div> <!-- class="container" -->
+
+</body>
+
+</html>
